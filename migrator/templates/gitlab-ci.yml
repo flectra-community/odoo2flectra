@@ -1,0 +1,71 @@
+image: ubuntu:xenial
+
+stages:
+  - testall
+  - testsingle
+
+variables:
+  POSTGRES_DB: postgres
+  POSTGRES_USER: flectra
+  POSTGRES_PASSWORD: flectra
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+
+services:
+  - name: postgres:10-alpine
+    alias: psql
+
+
+test_all_modules:
+  stage: testall
+  image: registry.gitlab.com/jamotion/flectra/ubuntu:1.5-alpha
+  script:
+    {%- if pip %}
+    - pip3 install --user -r ${CI_PROJECT_DIR}/requirements.txt
+    {%- endif %}
+    - mkdir ~/others
+    {% for dep in deps -%}
+    - git clone --branch oca-fixed --depth 1 https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/flectra-community/{{ dep }}.git ~/others/{{ dep }}
+    {% endfor -%}
+    - /opt/flectra/flectra-bin
+        --addons-path ${CI_PROJECT_DIR}{%- for dep in deps -%},~/others/{{ dep }}{%- endfor %}
+        --db_host psql
+        --db_port 5432
+        --db_user flectra
+        --db_password flectra
+        --database test_all
+        --test-enable
+        --init {{ ','.join(modules) }}
+        --stop-after-init
+        --log-level error
+        {% for mod in modules -%}
+        --log-handler flectra.addons.{{ mod }}:TEST
+        {% endfor %}
+
+
+{% for key, mod in modules.items() -%}
+test_module_{{ key }}:
+  stage: testsingle
+  when: on_failure
+  image: registry.gitlab.com/jamotion/flectra/ubuntu:1.5-alpha
+  script:
+    {%- if pip %}
+    - pip3 install --user -r ${CI_PROJECT_DIR}/requirements.txt
+    {%- endif %}
+    - mkdir ~/others
+    {% for dep in deps -%}
+    - git clone --branch oca-fixed --depth 1 https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/flectra-community/{{ dep }}.git ~/others/{{ dep }}
+    {% endfor -%}
+    - /opt/flectra/flectra-bin
+        --addons-path ${CI_PROJECT_DIR}{%- for dep in deps -%},~/others/{{ dep }}{%- endfor %}
+        --db_host psql
+        --db_port 5432
+        --db_user flectra
+        --db_password flectra
+        --database test_{{ key }}
+        --test-enable -i {{ key }}
+        --stop-after-init
+        --log-level error
+        --log-handler flectra.addons.{{ key }}:TEST
+
+{% endfor %}
