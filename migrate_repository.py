@@ -32,11 +32,9 @@ if __name__ == "__main__":
         _logger.error('Source folder %s not found!', args.src)
         exit(1)
 
-    if os.path.exists(args.dest):
-        _logger.debug('Removing destination folder %s', args.dest)
-        shutil.rmtree(args.dest)
-    _logger.debug('Creating destination folder %s', args.dest)
-    os.mkdir(args.dest)
+    if not os.path.exists(args.dest):
+        _logger.debug('Creating destination folder %s', args.dest)
+        os.mkdir(args.dest)
 
     repo_src_path = os.path.abspath(args.src)
     repo_dst_path = os.path.abspath(args.dest)
