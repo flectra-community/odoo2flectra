@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 from os.path import join as oj
 from shutil import copytree
 
@@ -213,6 +214,7 @@ class ModuleMigrator(object):
     def migrate(self):
         _logger.info('Starting migration of module %s', self._module_name)
         copytree(self._src, self._destination, symlinks=True, ignore_dangling_symlinks=True)
+        subprocess.call(['2to3', '-w', self._destination])
         for base, odoo_dirs, odoo_files in os.walk(self._destination, topdown=True):
             odoo_files = [f for f in odoo_files if not f[0] == '.']
             odoo_dirs[:] = [d for d in odoo_dirs if not d[0] == '.']
